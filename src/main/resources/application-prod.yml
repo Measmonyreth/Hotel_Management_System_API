@@ -1,0 +1,126 @@
+# Override Server Settings for Production
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+  error:
+    include-stacktrace: never
+    include-exception: false
+# Override Logging for Production
+logging:
+  level:
+    root: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+  file:
+    name: /var/log/application.log
+    max-size: 100MB
+    max-history: 30
+
+# Disable Swagger in Production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Restrict Actuator in Production
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      data-source-properties:
+        ssl: true
+        sslmode: require
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        useServerPrepStmts: true
+  web:
+    resources:
+      add-mappings: true
+  jpa:
+        hibernate:
+            ddl-auto: validate
+        show-sql: false
+        properties:
+          hibernate:
+            format_sql: false
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  security:
+    api-key: ${SPRING_SECURITY_API_KEY}
+    oauth2:
+      client:
+        registration:
+            google:
+              client-id: ${GOOGLE_CLIENT_ID}
+              client-secret: ${GOOGLE_CLIENT_SECRET}
+              scope:
+                - email
+                - profile
+              redirect-uri: "{baseUrl}/login/oauth2/code/google"
+
+app:
+  frontend-url: ${APP_FRONTEND_URL}
+  base-url: ${APP_BASE_URL}
+  hashids:
+    salt: ${HASHIDS_SALT}
+  token:
+    expiry-minutes: 15
+  mail:
+    from: ${MAIL_FROM}
+    dev-mode: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  refreshExpiration: 2592000000
+
+google:
+  web-client-id: ${GOOGLE_WEB_CLIENT_ID}
+  android-client-id: ${GOOGLE_ANDROID_CLIENT_ID}
+
+paypal:
+  client-id: ${PAYPAL_CLIENT_ID}
+  client-secret: ${PAYPAL_CLIENT_SECRET}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}

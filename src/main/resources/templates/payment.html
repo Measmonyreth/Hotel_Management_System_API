@@ -1,0 +1,226 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPal Payment</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            width: 100%;
+            max-width: 420px;
+        }
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            color: #1a1a2e;
+        }
+        label {
+            display: block;
+            margin: 16px 0 6px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .option:has(input:checked) {
+            border-color: #0070ba;
+            background: #eaf4fb;
+        }
+        .option small {
+            color: #666;
+            display: block;
+        }
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: #0070ba;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005c99;
+        }
+        button:disabled {
+            background: #9dbfd4;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-top: 16px;
+            min-height: 20px;
+        }
+        #status.error {
+            color: #c0392b;
+        }
+        #status.info {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>PayPal Payment</h2>
+
+    <div id="bookingSummary" style="display:none; background:#eaf4fb; border:1px solid #b7d9ee; border-radius:6px; padding:12px; font-size:14px; color:#2c3e50; text-align:left;"></div>
+
+    <div id="bookIdGroup">
+        <label for="bookId">Booking ID</label>
+        <input type="text" id="bookId" placeholder="Enter your booking ID">
+
+    </div>
+
+    <label>Payment Option</label>
+    <label class="option">
+        <input type="radio" name="option" value="FULL" checked>
+        <span>
+            Pay Full Amount
+            <small>Pay the remaining balance of the booking</small>
+        </span>
+    </label>
+    <label class="option">
+        <input type="radio" name="option" value="DEPOSIT_30">
+        <span>
+            Pay 30% Deposit
+            <small>Pay 30% of the total booking price now</small>
+        </span>
+    </label>
+
+    <button id="payBtn" onclick="makePayment()">Pay with PayPal</button>
+
+    <p id="status"></p>
+</div>
+
+<script>
+    const qp = new URLSearchParams(window.location.search);
+    // new-booking mode: booking details passed from the booking page,
+    // the booking itself is created only after PayPal payment succeeds
+    const isNewBooking = qp.has("roomId");
+
+    (function init() {
+        const summary = document.getElementById("bookingSummary");
+
+        if (isNewBooking) {
+            document.getElementById("bookIdGroup").style.display = "none";
+            const total = parseFloat(qp.get("total"));
+            summary.style.display = "block";
+            summary.innerHTML = `
+                <strong>New booking &mdash; Room #${qp.get("roomId")}</strong><br>
+                ${qp.get("checkIn")} &rarr; ${qp.get("checkOut")}<br>` +
+                (isNaN(total) ? "" : `Estimated total: <strong>$${total.toFixed(2)}</strong><br>
+                30% deposit: <strong>$${(total * 0.30).toFixed(2)}</strong><br>`) +
+                `<small>The booking is saved only after the PayPal payment succeeds.</small>`;
+            return;
+        }
+
+        // existing booking mode: /paypal/?bookId=..&code=..&total=..&remaining=..
+        const bookId = qp.get("bookId");
+        if (!bookId) return;
+
+        document.getElementById("bookId").value = bookId;
+        const code = qp.get("code");
+        const total = parseFloat(qp.get("total"));
+        const remaining = parseFloat(qp.get("remaining"));
+        if (isNaN(total)) return;
+
+        const deposit = Math.min(total * 0.30, isNaN(remaining) ? total : remaining);
+        summary.style.display = "block";
+        summary.innerHTML = `
+            <strong>Booking ${code || "#" + bookId}</strong><br>
+            Total price: <strong>$${total.toFixed(2)}</strong><br>
+            Remaining balance: <strong>$${(isNaN(remaining) ? total : remaining).toFixed(2)}</strong><br>
+            30% deposit: <strong>$${deposit.toFixed(2)}</strong>`;
+    })();
+
+    async function makePayment() {
+        const option = document.querySelector('input[name="option"]:checked').value;
+        const status = document.getElementById("status");
+        const payBtn = document.getElementById("payBtn");
+
+        let query;
+        if (isNewBooking) {
+            query = new URLSearchParams({
+                roomId: qp.get("roomId"),
+                customerId: qp.get("customerId"),
+                employeeId: qp.get("employeeId"),
+                email: qp.get("email"),
+                checkIn: qp.get("checkIn"),
+                checkOut: qp.get("checkOut"),
+                bookingType: qp.get("bookingType") || "ONLINE",
+                option: option
+            });
+        } else {
+            const bookId = document.getElementById("bookId").value.trim();
+            if (!bookId) {
+                status.className = "error";
+                status.innerText = "Please enter a valid booking ID!";
+                return;
+            }
+            query = new URLSearchParams({ bookId: bookId, option: option });
+        }
+
+        payBtn.disabled = true;
+        status.className = "info";
+        status.innerText = "Creating PayPal payment...";
+
+        try {
+            const response = await fetch("/api/payment/pay?" + query.toString(), {
+                method: "POST"
+            });
+            const result = await response.json();
+
+            if (response.ok && result.redirectUrl) {
+                status.innerText = `Redirecting to PayPal to pay $${result.amount}...`;
+                window.location.href = result.redirectUrl;
+            } else {
+                status.className = "error";
+                status.innerText = result.error || result.message || "Payment initiation failed.";
+                payBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            status.className = "error";
+            status.innerText = "Payment request failed.";
+            payBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html> -->

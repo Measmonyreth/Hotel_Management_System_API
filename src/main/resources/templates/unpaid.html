@@ -1,0 +1,181 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incomplete Payments</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 32px 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            width: 100%;
+            max-width: 860px;
+        }
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            color: #1a1a2e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        th {
+            background: #f6f8fa;
+            color: #333;
+        }
+        td.amount, th.amount {
+            text-align: right;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge.PARTIALLY_PAID {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .badge.UNPAID {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .pay-btn {
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #fff;
+            background: #0070ba;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pay-btn:hover {
+            background: #005c99;
+        }
+        #status {
+            text-align: center;
+            margin-top: 16px;
+            color: #2c3e50;
+            min-height: 20px;
+        }
+        .links {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        .links a {
+            color: #0070ba;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Incomplete Payments</h2>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Booking</th>
+            <th>Status</th>
+            <th class="amount">Total</th>
+            <th class="amount">Paid</th>
+            <th class="amount">Remaining</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+    </table>
+
+    <p id="status">Loading...</p>
+
+    <div class="links">
+        <a href="/paypal/book">Book a room</a>
+        <a href="/paypal/">Pay by booking ID</a>
+    </div>
+</div>
+
+<script>
+    function money(v) {
+        return v != null ? "$" + Number(v).toFixed(2) : "-";
+    }
+
+    function payUrl(p) {
+        const params = new URLSearchParams({
+            bookId: p.bookId,
+            code: p.code || "",
+            total: p.totalAmount != null ? p.totalAmount : "",
+            remaining: p.remainingAmount != null ? p.remainingAmount : ""
+        });
+        return "/paypal/?" + params.toString();
+    }
+
+    async function load() {
+        const rows = document.getElementById("rows");
+        const status = document.getElementById("status");
+
+        try {
+            const response = await fetch("/api/payment/incomplete");
+            const result = await response.json();
+
+            if (!response.ok || !result.data) {
+                status.innerText = result.message || "Failed to load payments.";
+                return;
+            }
+
+            if (result.data.length === 0) {
+                status.innerText = "No incomplete payments — everything is paid.";
+                return;
+            }
+
+            status.innerText = "";
+            rows.innerHTML = result.data.map(p => `
+                <tr>
+                    <td>${p.code || "#" + p.bookId}</td>
+                    <td><span class="badge ${p.paymentStatus}">${p.paymentStatus.replace("_", " ")}</span></td>
+                    <td class="amount">${money(p.totalAmount)}</td>
+                    <td class="amount">${money(p.paidAmount)}</td>
+                    <td class="amount"><strong>${money(p.remainingAmount)}</strong></td>
+                    <td>
+                        <button class="pay-btn" onclick="window.location.href='${payUrl(p)}'">
+                            Pay remaining
+                        </button>
+                    </td>
+                </tr>`).join("");
+        } catch (error) {
+            console.error("Error:", error);
+            status.innerText = "Failed to load payments.";
+        }
+    }
+
+    load();
+</script>
+
+</body>
+</html> -->

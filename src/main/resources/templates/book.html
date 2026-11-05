@@ -1,0 +1,289 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Room</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 32px 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            width: 100%;
+            max-width: 480px;
+        }
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            color: #1a1a2e;
+        }
+        label {
+            display: block;
+            margin: 14px 0 6px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+        .row > div {
+            flex: 1;
+        }
+        .room-lookup {
+            display: flex;
+            gap: 8px;
+        }
+        .room-lookup input {
+            flex: 1;
+        }
+        .room-lookup button {
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid #0070ba;
+            background: #fff;
+            color: #0070ba;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #roomInfo {
+            display: none;
+            background: #eaf4fb;
+            border: 1px solid #b7d9ee;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        #roomInfo .price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0070ba;
+        }
+        #summary {
+            display: none;
+            background: #f6f9f6;
+            border: 1px solid #cde3cd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        #summary .total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e7a33;
+        }
+        .book-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: #1e7a33;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .book-btn:hover {
+            background: #166028;
+        }
+        .book-btn:disabled {
+            background: #9cc4a5;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-top: 16px;
+            min-height: 20px;
+        }
+        #status.error {
+            color: #c0392b;
+        }
+        #status.info {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Book a Room</h2>
+
+    <label for="roomId">Room ID</label>
+    <div class="room-lookup">
+        <input type="number" id="roomId" min="1" placeholder="Enter room ID" onchange="loadRoom()">
+        <button type="button" onclick="loadRoom()">Check Room</button>
+    </div>
+    <div id="roomInfo"></div>
+
+    <div class="row">
+        <div>
+            <label for="checkIn">Check-in</label>
+            <input type="date" id="checkIn" onchange="updateSummary()">
+        </div>
+        <div>
+            <label for="checkOut">Check-out</label>
+            <input type="date" id="checkOut" onchange="updateSummary()">
+        </div>
+    </div>
+
+    <div class="row">
+        <div>
+            <label for="customerId">Customer ID</label>
+            <input type="number" id="customerId" min="1" placeholder="Customer ID">
+        </div>
+        <div>
+            <label for="employeeId">Employee ID</label>
+            <input type="number" id="employeeId" min="1" placeholder="Employee ID">
+        </div>
+    </div>
+
+    <label for="bookingType">Booking Type</label>
+    <select id="bookingType">
+        <option value="ONLINE" selected>Online</option>
+        <option value="WALK_IN">Walk-in</option>
+        <option value="PHONE">Phone</option>
+        <option value="AGENT">Agent</option>
+    </select>
+
+    <div id="summary"></div>
+
+    <button class="book-btn" id="bookBtn" onclick="bookRoom()">Continue to PayPal Payment</button>
+    <p style="text-align:center; font-size:13px; color:#666; margin-top:10px;">
+        The booking is saved only after the PayPal payment succeeds.
+    </p>
+
+    <p id="status"></p>
+</div>
+
+<script>
+    let room = null;
+
+    async function loadRoom() {
+        const roomId = document.getElementById("roomId").value;
+        const info = document.getElementById("roomInfo");
+        if (!roomId || roomId <= 0) return;
+
+        info.style.display = "block";
+        info.innerText = "Loading room...";
+        room = null;
+
+        try {
+            const response = await fetch(`/api/room/getroom/${roomId}`);
+            const result = await response.json();
+
+            if (response.ok && result.data) {
+                room = result.data;
+                const discount = room.discountPrice ? Number(room.discountPrice) : 0;
+                info.innerHTML = `
+                    <strong>${room.roomName || "Room"} (#${room.roomNumber || roomId})</strong>
+                    &mdash; ${room.roomType || ""} &mdash; ${room.statusRoom || ""}<br>
+                    <span class="price">$${Number(room.price).toFixed(2)} / night</span>
+                    ${discount > 0 ? `<br>Discount: -$${discount.toFixed(2)} / night` : ""}`;
+            } else {
+                info.innerText = result.message || "Room not found.";
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            info.innerText = "Failed to load room.";
+        }
+        updateSummary();
+    }
+
+    function nights() {
+        const checkIn = document.getElementById("checkIn").value;
+        const checkOut = document.getElementById("checkOut").value;
+        if (!checkIn || !checkOut) return 0;
+        return Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+    }
+
+    function updateSummary() {
+        const summary = document.getElementById("summary");
+        const n = nights();
+
+        if (!room || n <= 0) {
+            summary.style.display = "none";
+            return;
+        }
+
+        const pricePerNight = Number(room.price);
+        const discountPerNight = room.discountPrice ? Number(room.discountPrice) : 0;
+        const total = (pricePerNight - discountPerNight) * n;
+
+        summary.style.display = "block";
+        summary.innerHTML = `
+            ${n} night(s) &times; $${pricePerNight.toFixed(2)}
+            ${discountPerNight > 0 ? `(-$${discountPerNight.toFixed(2)} discount/night)` : ""}<br>
+            Estimated total: <span class="total">$${total.toFixed(2)}</span><br>
+            <small>Final price is confirmed by the server (VIP discounts may apply).</small>`;
+    }
+
+    function bookRoom() {
+        const roomId = document.getElementById("roomId").value;
+        const customerId = document.getElementById("customerId").value;
+        const employeeId = document.getElementById("employeeId").value;
+        const checkIn = document.getElementById("checkIn").value;
+        const checkOut = document.getElementById("checkOut").value;
+        const bookingType = document.getElementById("bookingType").value;
+        const status = document.getElementById("status");
+
+        if (!roomId || !customerId || !employeeId || !checkIn || !checkOut) {
+            status.className = "error";
+            status.innerText = "Please fill in all fields!";
+            return;
+        }
+        if (nights() <= 0) {
+            status.className = "error";
+            status.innerText = "Check-out must be after check-in!";
+            return;
+        }
+
+        // nothing is saved yet — the booking is created only after
+        // the PayPal payment succeeds (see /api/success)
+        const params = new URLSearchParams({
+            roomId: roomId,
+            customerId: customerId,
+            employeeId: employeeId,
+            checkIn: checkIn,
+            checkOut: checkOut,
+            bookingType: bookingType
+        });
+        if (room && nights() > 0) {
+            const pricePerNight = Number(room.price);
+            const discountPerNight = room.discountPrice ? Number(room.discountPrice) : 0;
+            params.set("total", ((pricePerNight - discountPerNight) * nights()).toFixed(2));
+        }
+
+        status.className = "info";
+        status.innerText = "Redirecting to payment...";
+        window.location.href = "/paypal/?" + params.toString();
+    }
+</script>
+
+</body>
+</html> -->
